@@ -45,13 +45,14 @@ namespace BucketDeleteApp
 
                         log.LogInformation($"Deleting file : " + digitalFile + " - unitid : " + unitId );
 
-                        DeleteFile(digitalFile);
+                        var response = DeleteFile(digitalFile);
 
-                        log.LogInformation($"file : " + digitalFile + " - unitid : " + unitId + " deleted successfully");
+                        log.LogInformation($"file : " + digitalFile + " - unitid : " + unitId + " deleted successfully, response was : " + response.Status.ToString());
 
-                        string updateQuery = "Update DeleteRequest Set Process = 1 where UnitId = '" + unitId + "';";
-                        string deleteQuery = "Delete from StorageUnit where UnitId = '" + unitId + "';";
+                        string updateQuery = "Update DeleteRequest Set Process = 1 where UnitId = @unitId;";
+                        string deleteQuery = "Delete from StorageUnit where UnitId = @unitId;";
                         SqlCommand updateCommand = new SqlCommand(updateQuery + deleteQuery, conn);
+                        updateCommand.Parameters.AddWithValue("@unitId", unitId);
 
                         if (conn.State == ConnectionState.Open)
                             conn.Close();
@@ -68,19 +69,19 @@ namespace BucketDeleteApp
         }
 
 
-        public static void DeleteFile(String filename)
+        public static async Task<DeleteObjectResponse> DeleteFile(String filename)
         {
             String key = filename;
             string _foldername = "images";
             string _keyPublic = Environment.GetEnvironmentVariable("aws_accesskeyid");
             string _keySecret = Environment.GetEnvironmentVariable("aws_secretkey");
             string _bucket = Environment.GetEnvironmentVariable("aws_bucket");
-            var amazonClient = new AmazonS3Client(_keyPublic, _keySecret, Amazon.RegionEndpoint.APSoutheast1);
+            var amazonClient = new AmazonS3Client(_keyPublic, _keySecret, Amazon.RegionEndpoint.APSouth1);
 
             var deleteObjectRequest = new DeleteObjectRequest { BucketName = _bucket, Key = String.Format("{0}/{1}", _foldername, key) };
-            var response = amazonClient.DeleteObjectAsync(deleteObjectRequest);
-        
-        
+            var response = amazonClient.DeleteObjectAsync(deleteObjectRequest).GetAwaiter().GetResult();
+
+            return response;
         }
     }
 }

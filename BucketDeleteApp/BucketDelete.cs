@@ -14,7 +14,7 @@ namespace BucketDeleteApp
     public static class BucketDelete
     {
         [FunctionName("BucketDelete")]
-        public static void Run([TimerTrigger("0 0 8,20 * * *")] TimerInfo myTimer, ILogger log)
+        public static void Run([TimerTrigger("* * * * * *")] TimerInfo myTimer, ILogger log)
         {
             log.LogInformation($"BucketDelete function started at: {DateTime.Now}");
             var str = Environment.GetEnvironmentVariable("sqldb_connection");
@@ -71,13 +71,16 @@ namespace BucketDeleteApp
         public static void DeleteFile(String filename)
         {
             String key = filename;
+            string _foldername = "images";
             string _keyPublic = Environment.GetEnvironmentVariable("aws_accesskeyid");
             string _keySecret = Environment.GetEnvironmentVariable("aws_secretkey");
             string _bucket = Environment.GetEnvironmentVariable("aws_bucket");
-            var amazonClient = new AmazonS3Client(_keyPublic, _keySecret);
-            
-            var deleteObjectRequest = new DeleteObjectRequest { BucketName = _bucket, Key = key };
+            var amazonClient = new AmazonS3Client(_keyPublic, _keySecret, Amazon.RegionEndpoint.APSoutheast1);
+
+            var deleteObjectRequest = new DeleteObjectRequest { BucketName = _bucket, Key = String.Format("{0}/{1}", _foldername, key) };
             var response = amazonClient.DeleteObjectAsync(deleteObjectRequest);
+        
+        
         }
     }
 }

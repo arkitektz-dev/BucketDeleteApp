@@ -17,7 +17,19 @@ namespace BucketDeleteApp
         public static void Run([TimerTrigger("* * * * * *")] TimerInfo myTimer, ILogger log)
         {
             log.LogInformation($"BucketDelete function started at: {DateTime.Now}");
-            var str = Environment.GetEnvironmentVariable("sqldb_connection");
+            
+
+            log.LogInformation($"BucketDelete function connecting keyvault at : {DateTime.Now}");
+            string connectionStringKeyVault = string.Format("RunAs=App;AppId={0};{1}{2};{3}{4}", Environment.GetEnvironmentVariable("ClientID"), "TenantId=", Environment.GetEnvironmentVariable("TenantID"), "AppKey=", Environment.GetEnvironmentVariable("ClientSecret"));
+            var azureServiceTokenProvider = new AzureServiceTokenProvider(connectionStringKeyVault);
+            string s3SecretKey, s3Id, s3Url, connectionString;
+            var keyVaultClient = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(azureServiceTokenProvider.KeyVaultTokenCallback.Invoke));
+            s3Id = keyVaultClient.GetSecretAsync(string.Format("{0}{1}", Environment.GetEnvironmentVariable("keyVaultURI"), "S3ID")).Result.Value;
+            s3SecretKey = keyVaultClient.GetSecretAsync(string.Format("{0}{1}", Environment.GetEnvironmentVariable("keyVaultURI"), "S3Secret")).Result.Value;
+            s3Url = keyVaultClient.GetSecretAsync(string.Format("{0}{1}", Environment.GetEnvironmentVariable("keyVaultURI"), "S3URL")).Result.Value;
+            log.LogInformation($"Reading from keyvault completed at : {DateTime.Now}");
+
+            var str = keyVaultClient.GetSecretAsync(string.Format("{0}{1}", Environment.GetEnvironmentVariable("keyVaultURI"), "sSQLConnectionString")).Result.Value;  //Environment.GetEnvironmentVariable("sqldb_connection");
 
             log.LogInformation($"BucketDelete function connecting database at : {DateTime.Now}");
             using (SqlConnection conn = new SqlConnection(str))
@@ -95,15 +107,9 @@ namespace BucketDeleteApp
             }
         }
 
-        public static DeleteObjectResponse DeleteFile(String filename)
+        private static DeleteObjectResponse DeleteFile(string filename, string s3SecretKey, string s3Id, string s3Url)
         {
-            string connectionStringKeyVault = string.Format("RunAs=App;AppId={0};{1}{2};{3}{4}", Environment.GetEnvironmentVariable("ClientID"), "TenantId=", Environment.GetEnvironmentVariable("TenantID"), "AppKey=", Environment.GetEnvironmentVariable("ClientSecret"));
-            var azureServiceTokenProvider = new AzureServiceTokenProvider(connectionStringKeyVault);
-            string s3SecretKey, s3Id;
-            var keyVaultClient = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(azureServiceTokenProvider.KeyVaultTokenCallback.Invoke));
-            s3Id = keyVaultClient.GetSecretAsync(string.Format("{0}{1}", Environment.GetEnvironmentVariable("keyVaultURI"), "S3ID")).Result.Value;
-            s3SecretKey = keyVaultClient.GetSecretAsync(string.Format("{0}{1}", Environment.GetEnvironmentVariable("keyVaultURI"), "S3Secret")).Result.Value;
-            var s3Url = keyVaultClient.GetSecretAsync(string.Format("{0}{1}", Environment.GetEnvironmentVariable("keyVaultURI"), "S3URL")).Result.Value;
+            
 
             var config = new AmazonS3Config();
             config.ServiceURL = s3Url; 

@@ -58,7 +58,7 @@ namespace BucketDeleteApp
 
                         log.LogInformation($"Deleting file : " + digitalFile + " - unitid : " + unitId );
 
-                        var response = DeleteFile(digitalFile);
+                        var response = DeleteFile(digitalFile, s3SecretKey, s3Id, s3Url);
 
                         log.LogInformation($"file : " + digitalFile + " - unitid : " + unitId + " deleted successfully, response was : " + response);
 
